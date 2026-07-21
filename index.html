@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B1F3A">
+<title>SAMU Estoque</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  :root{
+    --navy:#0B1F3A;      /* azul viatura, fundo */
+    --navy-2:#132C4F;    /* cartões */
+    --ink:#EAF0F7;       /* texto claro */
+    --mute:#8FA6C4;      /* texto secundário */
+    --ok:#2FA36B;        /* conforme */
+    --warn:#E2A03F;      /* vence em breve */
+    --crit:#D64545;      /* vencido */
+    --line:#22406B;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    margin:0;background:var(--navy);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    padding-bottom:88px;
+  }
+  header{
+    padding:18px 16px 12px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px;position:sticky;top:0;
+    background:var(--navy);z-index:10;
+  }
+  header .pulse{width:10px;height:10px;border-radius:50%;background:var(--ok)}
+  header h1{font-size:17px;margin:0;letter-spacing:.3px;font-weight:650}
+  header small{display:block;color:var(--mute);font-weight:400;font-size:12px}
+  main{padding:16px}
+  .card{background:var(--navy-2);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+  label{display:block;font-size:13px;color:var(--mute);margin:12px 0 6px}
+  input,select{
+    width:100%;padding:14px;font-size:16px;border-radius:10px;
+    border:1px solid var(--line);background:#0E2647;color:var(--ink);
+  }
+  input:focus,select:focus{outline:2px solid #3D7DD8;outline-offset:1px}
+  button{
+    width:100%;padding:16px;font-size:16px;font-weight:650;border:0;
+    border-radius:12px;background:#2C6FD1;color:#fff;margin-top:16px;
+  }
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  button.danger{background:var(--crit)}
+  button:active{transform:translateY(1px)}
+  /* assinatura: faixa semáforo de validade */
+  .item{
+    display:flex;gap:12px;background:var(--navy-2);border:1px solid var(--line);
+    border-radius:12px;padding:12px;margin-bottom:10px;overflow:hidden;position:relative;
+  }
+  .item::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--ok)}
+  .item.w::before{background:var(--warn)} .item.c::before{background:var(--crit)}
+  .item .n{font-weight:600;font-size:15px}
+  .item .m{color:var(--mute);font-size:12.5px;margin-top:3px}
+  .qty{margin-left:auto;text-align:right;font-weight:700;font-size:18px}
+  nav{
+    position:fixed;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(4,1fr);
+    background:#08182D;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)
+  }
+  nav button{background:none;margin:0;border-radius:0;padding:12px 4px;font-size:11px;font-weight:600;color:var(--mute)}
+  nav button.on{color:#7FB2FF;box-shadow:inset 0 2px 0 #2C6FD1}
+  nav button i{display:block;font-size:19px;font-style:normal;margin-bottom:3px}
+  .hide{display:none}
+  .toast{
+    position:fixed;left:16px;right:16px;bottom:96px;padding:14px;border-radius:12px;
+    background:#123; border:1px solid var(--line);font-size:14px;z-index:50
+  }
+  .toast.ok{background:#12402C;border-color:var(--ok)}
+  .toast.err{background:#43191B;border-color:var(--crit)}
+  h2{font-size:15px;margin:4px 0 12px;color:var(--mute);font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+  #reader{width:100%;border-radius:12px;overflow:hidden;margin-top:12px}
+  .row{display:flex;gap:10px} .row>*{flex:1}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="pulse" id="pulse"></span>
+  <div>
+    <h1>SAMU Estoque</h1>
+    <small id="ctx">Carregando…</small>
+  </div>
+</header>
+
+<main>
+  <!-- ===== CONFIGURAÇÃO (primeiro acesso) ===== -->
+  <section id="pg-cfg" class="hide">
+    <div class="card">
+      <h2>Configuração</h2>
+      <label>URL do Supabase</label>
+      <input id="cfgUrl" placeholder="https://xxxx.supabase.co">
+      <label>Chave anon (pública)</label>
+      <input id="cfgKey" placeholder="eyJ...">
+      <label>Endereço de estoque (id_addrees)</label>
+      <input id="cfgAddr" type="number" placeholder="1">
+      <label>Seu nome</label>
+      <input id="cfgUser" placeholder="Ex: Bruno">
+      <button onclick="saveCfg()">Salvar e entrar</button>
+    </div>
+  </section>
+
+  <!-- ===== ENTRADA ===== -->
+  <section id="pg-in" class="hide">
+    <div class="card">
+      <h2>Adicionar ao estoque</h2>
+      <label>Produto</label>
+      <select id="inProd"></select>
+      <label>Lote</label>
+      <div class="row">
+        <input id="inLote" placeholder="Código do lote">
+        <button class="ghost" style="margin:0;flex:0 0 96px" onclick="scan('inLote')">Escanear</button>
+      </div>
+      <label>Validade</label>
+      <input id="inVal" type="date">
+      <label>Quantidade</label>
+      <input id="inQty" type="number" inputmode="numeric" value="1" min="1">
+      <button onclick="entrada()">Adicionar ao estoque</button>
+      <div id="reader"></div>
+    </div>
+  </section>
+
+  <!-- ===== BAIXA ===== -->
+  <section id="pg-out" class="hide">
+    <div class="card">
+      <h2>Dar baixa</h2>
+      <label>Produto</label>
+      <select id="outProd"></select>
+      <label>Quantidade</label>
+      <input id="outQty" type="number" inputmode="numeric" value="1" min="1">
+      <p style="color:var(--mute);font-size:12.5px;margin:14px 0 0">
+        A baixa segue o lote que vence primeiro.
+      </p>
+      <button class="danger" onclick="saida()">Dar baixa</button>
+    </div>
+  </section>
+
+  <!-- ===== ESTOQUE ===== -->
+  <section id="pg-list" class="hide">
+    <h2>Estoque atual</h2>
+    <div id="listBox"></div>
+  </section>
+
+  <!-- ===== VENCIMENTOS ===== -->
+  <section id="pg-venc" class="hide">
+    <h2>Vencimentos</h2>
+    <div id="vencBox"></div>
+  </section>
+</main>
+
+<nav>
+  <button id="t-in"   class="on" onclick="go('in')"><i>+</i>Entrada</button>
+  <button id="t-out"  onclick="go('out')"><i>−</i>Baixa</button>
+  <button id="t-list" onclick="go('list')"><i>▤</i>Estoque</button>
+  <button id="t-venc" onclick="go('venc')"><i>◷</i>Validade</button>
+</nav>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+/* ---------- configuração salva no aparelho ---------- */
+let CFG = JSON.parse(localStorage.getItem('samu_cfg') || 'null');
+
+function saveCfg(){
+  const c = {
+    url : cfgUrl.value.trim().replace(/\/$/,''),
+    key : cfgKey.value.trim(),
+    addr: parseInt(cfgAddr.value),
+    user: cfgUser.value.trim() || 'operador'
+  };
+  if(!c.url || !c.key || !c.addr){ toast('Preencha URL, chave e endereço.','err'); return; }
+  localStorage.setItem('samu_cfg', JSON.stringify(c));
+  CFG = c; boot();
+}
+
+/* ---------- chamadas ao Supabase ---------- */
+async function api(path, opt={}){
+  const r = await fetch(CFG.url + '/rest/v1/' + path, {
+    ...opt,
+    headers:{
+      'apikey': CFG.key,
+      'Authorization': 'Bearer ' + CFG.key,
+      'Content-Type': 'application/json',
+      ...(opt.headers||{})
+    }
+  });
+  if(!r.ok) throw new Error(await r.text());
+  const t = await r.text();
+  return t ? JSON.parse(t) : null;
+}
+const rpc = (fn, body) => api('rpc/' + fn, {method:'POST', body:JSON.stringify(body)});
+
+/* ---------- navegação ---------- */
+function go(p){
+  ['cfg','in','out','list','venc'].forEach(x=>{
+    document.getElementById('pg-'+x).classList.add('hide');
+    const t=document.getElementById('t-'+x); if(t) t.classList.remove('on');
+  });
+  document.getElementById('pg-'+p).classList.remove('hide');
+  const t=document.getElementById('t-'+p); if(t) t.classList.add('on');
+  if(p==='list') loadEstoque();
+  if(p==='venc') loadVenc();
+}
+
+/* ---------- aviso ---------- */
+let tId;
+function toast(msg, kind=''){
+  clearTimeout(tId);
+  const d=document.createElement('div');
+  d.className='toast '+kind; d.textContent=msg; d.id='tst';
+  document.getElementById('tst')?.remove();
+  document.body.appendChild(d);
+  tId=setTimeout(()=>d.remove(), 3500);
+}
+
+/* ---------- carregar produtos ---------- */
+async function loadProdutos(){
+  const ps = await api('TBLProducts?select=id_product,name&order=name');
+  ['inProd','outProd'].forEach(id=>{
+    const s=document.getElementById(id); s.innerHTML='';
+    ps.forEach(p=>{
+      const o=document.createElement('option');
+      o.value=p.id_product; o.textContent=p.name || ('#'+p.id_product);
+      s.appendChild(o);
+    });
+  });
+}
+
+/* ---------- entrada ---------- */
+async function entrada(){
+  try{
+    await rpc('fn_mov_entrada',{
+      p_id_product : parseInt(inProd.value),
+      p_id_addrees : CFG.addr,
+      p_code       : inLote.value.trim(),
+      p_dtexpiration: inVal.value || null,
+      p_qty        : parseFloat(inQty.value),
+      p_user       : CFG.user
+    });
+    toast('Entrada registrada.','ok');
+    inLote.value=''; inVal.value=''; inQty.value=1;
+  }catch(e){ toast('Não deu para registrar. '+e.message,'err'); }
+}
+
+/* ---------- baixa ---------- */
+async function saida(){
+  try{
+    const r = await rpc('fn_mov_saida',{
+      p_id_product : parseInt(outProd.value),
+      p_id_addrees : CFG.addr,
+      p_qty        : parseFloat(outQty.value),
+      p_user       : CFG.user
+    });
+    const o = Array.isArray(r)? r[0] : r;
+    if(o && o.out_faltou > 0) toast(`Baixado ${o.out_baixado}. Faltou ${o.out_faltou} em estoque.`,'err');
+    else toast('Baixa registrada.','ok');
+    outQty.value=1;
+  }catch(e){ toast('Não deu para dar baixa. '+e.message,'err'); }
+}
+
+/* ---------- listas ---------- */
+async function loadEstoque(){
+  listBox.innerHTML='<p style="color:var(--mute)">Carregando…</p>';
+  try{
+    const d = await api(`vw_estoque?id_addrees=eq.${CFG.addr}&order=produto`);
+    if(!d.length){ listBox.innerHTML='<p style="color:var(--mute)">Nenhum item em estoque. Registre uma entrada para começar.</p>'; return; }
+    listBox.innerHTML = d.map(i=>row(i, i.validade)).join('');
+  }catch(e){ listBox.innerHTML='<p style="color:var(--crit)">Não deu para carregar.</p>'; }
+}
+async function loadVenc(){
+  vencBox.innerHTML='<p style="color:var(--mute)">Carregando…</p>';
+  try{
+    const d = await api(`vw_vencimentos?id_addrees=eq.${CFG.addr}&status_venc=in.(VENCIDO,VENCE_30,VENCE_60)&order=validade`);
+    if(!d.length){ vencBox.innerHTML='<p style="color:var(--mute)">Nada vencendo nos próximos 60 dias.</p>'; return; }
+    vencBox.innerHTML = d.map(i=>row(i, i.validade, i.dias_para_vencer)).join('');
+  }catch(e){ vencBox.innerHTML='<p style="color:var(--crit)">Não deu para carregar.</p>'; }
+}
+function row(i, val, dias){
+  let cls='', txt = val ? new Date(val+'T00:00').toLocaleDateString('pt-BR') : 'sem data';
+  if(val){
+    const d = dias!=null ? dias : Math.round((new Date(val+'T00:00') - new Date())/864e5);
+    if(d < 0)      { cls='c'; txt = 'venceu em '+txt; }
+    else if(d<=30) { cls='w'; txt = 'vence em '+d+' dias'; }
+    else if(d<=60) { cls='w'; txt = 'vence em '+d+' dias'; }
+  }
+  return `<div class="item ${cls}">
+    <div><div class="n">${i.produto??''}</div>
+    <div class="m">lote ${i.lote||'—'} · ${txt}</div></div>
+    <div class="qty">${i.quantidade??''}</div></div>`;
+}
+
+/* ---------- leitor de código de barras ---------- */
+let qr;
+function scan(target){
+  const box=document.getElementById('reader');
+  if(qr){ qr.stop().catch(()=>{}); qr=null; box.innerHTML=''; return; }
+  qr = new Html5Qrcode('reader');
+  qr.start({facingMode:'environment'}, {fps:10, qrbox:{width:250,height:130}},
+    txt=>{ document.getElementById(target).value = txt; qr.stop(); qr=null; box.innerHTML=''; toast('Código lido.','ok'); },
+    ()=>{}
+  ).catch(()=> toast('Não deu para abrir a câmera.','err'));
+}
+
+/* ---------- início ---------- */
+async function boot(){
+  if(!CFG){ go('cfg'); document.getElementById('ctx').textContent='Configure o acesso'; return; }
+  document.getElementById('ctx').textContent = CFG.user + ' · estoque ' + CFG.addr;
+  try{ await loadProdutos(); go('in'); }
+  catch(e){ toast('Não deu para conectar ao banco. Revise a configuração.','err'); go('cfg'); }
+}
+boot();
+</script>
+</body>
+</html>
