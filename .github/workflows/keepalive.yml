@@ -1,0 +1,82 @@
+name: keepalive
+
+# Roda domingo e quarta, 12:10 UTC (~09:10 em Brasília).
+# Duas vezes por semana dá folga contra os 7 dias do Supabase:
+# se uma execução falhar, a outra ainda segura.
+on:
+  schedule:
+    - cron: '10 12 * * 0,3'
+  workflow_dispatch:        # permite rodar na mão pelo botão "Run workflow"
+
+permissions:
+  contents: write           # necessário para o commit anti-desativação
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---------------------------------------------------------------
+      # 1) PING NO SUPABASE
+      # Insere uma linha em TBLKeepAlive. É atividade real no banco,
+      # que é o que zera o contador de 7 dias do plano gratuito.
+      # ---------------------------------------------------------------
+      - name: Pingar o banco
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+            echo "Faltam os secrets SUPABASE_URL / SUPABASE_KEY."
+            exit 1
+          fi
+
+          codigo=$(curl -s -o /tmp/resposta.txt -w "%{http_code}" \
+            -X POST "$SUPABASE_URL/rest/v1/TBLKeepAlive" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+
+          echo "HTTP $codigo"
+          cat /tmp/resposta.txt
+
+          if [ "$codigo" -lt 200 ] || [ "$codigo" -ge 300 ]; then
+            echo "Ping falhou."
+            exit 1
+          fi
+          echo "Banco acordado com sucesso."
+
+      # ---------------------------------------------------------------
+      # 2) ANTI-DESATIVAÇÃO DO PRÓPRIO WORKFLOW
+      # O GitHub desliga agendamentos após 60 dias sem commits.
+      # A cada ~40 dias gravamos um marcador para reiniciar essa contagem.
+      # ---------------------------------------------------------------
+      - name: Manter o agendamento ativo
+        run: |
+          marcador=.github/ultimo-keepalive.txt
+          hoje=$(date +%s)
+
+          if [ -f "$marcador" ]; then
+            anterior=$(head -n1 "$marcador" 2>/dev/null || echo 0)
+          else
+            anterior=0
+          fi
+
+          dias=$(( (hoje - anterior) / 86400 ))
+          echo "Dias desde o último commit de manutenção: $dias"
+
+          if [ "$dias" -lt 40 ]; then
+            echo "Ainda dentro do prazo. Nada a fazer."
+            exit 0
+          fi
+
+          echo "$hoje" > "$marcador"
+          date -u +"%Y-%m-%d %H:%M UTC" >> "$marcador"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$marcador"
+          git commit -m "chore: manter agendamento ativo"
+          git push
