@@ -28,7 +28,7 @@
     display:flex;align-items:center;gap:10px;position:sticky;top:0;
     background:var(--navy);z-index:10;
   }
-  header .pulse{width:10px;height:10px;border-radius:50%;background:var(--ok)}
+  header .emblem{width:34px;height:34px;flex:0 0 34px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
   header h1{font-size:17px;margin:0;letter-spacing:.3px;font-weight:650}
   header small{display:block;color:var(--mute);font-weight:400;font-size:12px}
   main{padding:16px}
@@ -63,7 +63,8 @@
   nav button{background:none;margin:0;border-radius:0;padding:12px 4px;font-size:11px;font-weight:600;color:var(--mute)}
   nav button.on{color:#7FB2FF;box-shadow:inset 0 2px 0 #2C6FD1}
   nav button i{display:block;font-size:19px;font-style:normal;margin-bottom:3px}
-  .hide{display:none}
+  .badge{background:var(--crit);color:#fff;border-radius:9px;padding:1px 6px;font-size:10px;margin-left:2px}
+  .hide{display:none !important}
   .toast{
     position:fixed;left:16px;right:16px;bottom:96px;padding:14px;border-radius:12px;
     background:#123; border:1px solid var(--line);font-size:14px;z-index:50
@@ -72,13 +73,86 @@
   .toast.err{background:#43191B;border-color:var(--crit)}
   h2{font-size:15px;margin:4px 0 12px;color:var(--mute);font-weight:600;letter-spacing:.4px;text-transform:uppercase}
   #reader{width:100%;border-radius:12px;overflow:hidden;margin-top:12px}
+  /* scanner em tela cheia */
+  .scan-ov{
+    position:fixed;inset:0;z-index:200;background:#050D18;
+    display:flex;flex-direction:column;padding:0 16px
+      calc(18px + env(safe-area-inset-bottom));
+  }
+  .scan-top{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:calc(14px + env(safe-area-inset-top)) 0 14px;
+    font-size:16px;font-weight:650
+  }
+  .scan-x{
+    width:38px;height:38px;flex:0 0 38px;margin:0;padding:0;border-radius:50%;
+    background:#16345C;font-size:16px;line-height:1
+  }
+  .scan-cam{
+    flex:1;min-height:0;border-radius:16px;overflow:hidden;background:#000;
+    display:flex;align-items:center;justify-content:center
+  }
+  .scan-cam video{width:100%!important;height:100%!important;object-fit:cover}
+  .scan-hint{color:var(--mute);font-size:13px;text-align:center;margin:14px 0 0}
+  .scan-cancel{margin-top:12px}
   .row{display:flex;gap:10px} .row>*{flex:1}
+  /* sugestões de lote já existente */
+  .sug{margin-top:6px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#0E2647}
+  .sug button{
+    width:100%;margin:0;border-radius:0;background:none;text-align:left;
+    padding:12px 14px;font-size:14px;font-weight:500;color:var(--ink);
+    border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px
+  }
+  .sug button:last-child{border-bottom:0}
+  .sug .lote{font-weight:700}
+  .sug .meta{color:var(--mute);font-size:12.5px;margin-left:auto;text-align:right}
+  .sug .novo{color:var(--mute);font-style:italic}
+  /* chip informativo do lote selecionado */
+  .chip{margin-top:10px;padding:10px 12px;border-radius:10px;background:#0E2647;
+        border:1px solid var(--line);font-size:13px;color:var(--mute)}
+  .chip b{color:var(--ink)}
+  /* item clicável */
+  .item{cursor:pointer}
+  .item:active{background:#16345C}
+  /* modal folha inferior */
+  .modal{position:fixed;inset:0;background:rgba(4,12,24,.72);z-index:100;
+         display:flex;align-items:flex-end}
+  .sheet{width:100%;background:var(--navy-2);border-top:1px solid var(--line);
+         border-radius:18px 18px 0 0;padding:10px 16px calc(18px + env(safe-area-inset-bottom));
+         max-height:86vh;overflow:auto}
+  .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 14px}
+  .md-t{font-size:17px;font-weight:650}
+  .md-m{color:var(--mute);font-size:13px;margin:4px 0 14px}
+  .seg{display:flex;gap:8px;margin-bottom:6px}
+  .seg button{margin:0;background:#0E2647;border:1px solid var(--line);font-size:14px;padding:12px}
+  .seg button.on{background:#2C6FD1;border-color:#2C6FD1}
+  /* alertas de vencimento */
+  .alert{border-radius:12px;padding:14px;margin-bottom:10px;border:1px solid}
+  .alert.crit{background:#3A1618;border-color:var(--crit)}
+  .alert.warn{background:#3A2E12;border-color:var(--warn)}
+  .alert .at{font-weight:650;font-size:14px;margin-bottom:4px}
+  .alert .am{font-size:12.5px;color:var(--mute)}
+  .alert .aa{display:flex;gap:8px;margin-top:12px}
+  .alert .aa button{margin:0;padding:11px;font-size:13px}
 </style>
 </head>
 <body>
 
 <header>
-  <span class="pulse" id="pulse"></span>
+  <!-- Estrela da Vida: símbolo internacional do atendimento pré-hospitalar -->
+  <svg class="emblem" viewBox="0 0 100 100" aria-label="SAMU" role="img">
+    <g transform="translate(50,50)">
+      <g fill="#D64545" stroke="#fff" stroke-width="3" stroke-linejoin="round">
+        <rect x="-11" y="-46" width="22" height="92" rx="4"/>
+        <rect x="-11" y="-46" width="22" height="92" rx="4" transform="rotate(60)"/>
+        <rect x="-11" y="-46" width="22" height="92" rx="4" transform="rotate(120)"/>
+      </g>
+      <!-- bastão de Asclépio -->
+      <rect x="-2" y="-27" width="4" height="54" rx="2" fill="#fff"/>
+      <path d="M-7,-19 C7,-14 -7,-4 7,1 C-7,6 7,16 -6,21"
+            fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+    </g>
+  </svg>
   <div>
     <h1>SAMU Estoque</h1>
     <small id="ctx">Carregando…</small>
@@ -110,15 +184,16 @@
       <select id="inProd"></select>
       <label>Lote</label>
       <div class="row">
-        <input id="inLote" placeholder="Código do lote">
+        <input id="inLote" placeholder="Código do lote" autocomplete="off"
+               oninput="buscaLote()" onfocus="buscaLote()">
         <button class="ghost" style="margin:0;flex:0 0 96px" onclick="scan('inLote')">Escanear</button>
       </div>
+      <div id="loteSug" class="sug hide"></div>
       <label>Validade</label>
       <input id="inVal" type="date">
       <label>Quantidade</label>
       <input id="inQty" type="number" inputmode="numeric" value="1" min="1">
       <button onclick="entrada()">Adicionar ao estoque</button>
-      <div id="reader"></div>
     </div>
   </section>
 
@@ -128,12 +203,18 @@
       <h2>Dar baixa</h2>
       <label>Produto</label>
       <select id="outProd"></select>
+      <label>Lote</label>
+      <div class="row">
+        <input id="outLote" placeholder="Informe ou escaneie o lote" autocomplete="off"
+               oninput="buscaLoteSaida()" onfocus="buscaLoteSaida()">
+        <button class="ghost" style="margin:0;flex:0 0 96px" onclick="scan('outLote')">Escanear</button>
+      </div>
+      <div id="outSug" class="sug hide"></div>
+      <div id="outInfo" class="chip hide"></div>
       <label>Quantidade</label>
       <input id="outQty" type="number" inputmode="numeric" value="1" min="1">
-      <p style="color:var(--mute);font-size:12.5px;margin:14px 0 0">
-        A baixa segue o lote que vence primeiro.
-      </p>
       <button class="danger" onclick="saida()">Dar baixa</button>
+      <button class="ghost" onclick="saidaFefo()">Baixar pelo que vence primeiro</button>
     </div>
   </section>
 
@@ -146,9 +227,32 @@
   <!-- ===== VENCIMENTOS ===== -->
   <section id="pg-venc" class="hide">
     <h2>Vencimentos</h2>
+    <div id="alertBox"></div>
     <div id="vencBox"></div>
   </section>
 </main>
+
+<!-- ===== SCANNER EM TELA CHEIA ===== -->
+<div id="scanOverlay" class="scan-ov hide">
+  <div class="scan-top">
+    <span id="scanTitle">Escanear lote</span>
+    <button class="scan-x" onclick="fechaScan()" aria-label="Fechar">✕</button>
+  </div>
+  <div id="reader" class="scan-cam"></div>
+  <p class="scan-hint">Aponte a câmera para o código de barras da embalagem</p>
+  <button class="ghost scan-cancel" onclick="fechaScan()">Cancelar</button>
+</div>
+
+<!-- ===== MODAL DE AÇÕES DO ITEM ===== -->
+<div id="modal" class="modal hide" onclick="if(event.target===this)fechaModal()">
+  <div class="sheet">
+    <div class="grab"></div>
+    <div id="mdTitle" class="md-t"></div>
+    <div id="mdMeta"  class="md-m"></div>
+    <div id="mdBody"></div>
+    <button class="ghost" onclick="fechaModal()">Fechar</button>
+  </div>
+</div>
 
 <nav>
   <button id="t-in"   class="on" onclick="go('in')"><i>+</i>Entrada</button>
@@ -225,7 +329,70 @@ async function loadProdutos(){
       s.appendChild(o);
     });
   });
+  // trocar de produto limpa o lote: lote é sempre relativo a um produto
+  document.getElementById('inProd').onchange = ()=>{
+    inLote.value=''; inVal.value=''; fechaSug();
+  };
+  document.getElementById('outProd').onchange = ()=>{
+    outLote.value=''; loteSel=null; fechaSugOut();
+    document.getElementById('outInfo').classList.add('hide');
+  };
 }
+
+/* ---------- autocomplete de lote (amarrado ao produto) ---------- */
+let sugTimer, sugAtual = [];
+
+function buscaLote(){
+  clearTimeout(sugTimer);
+  sugTimer = setTimeout(execBuscaLote, 250);   // espera parar de digitar
+}
+
+async function execBuscaLote(){
+  const box  = document.getElementById('loteSug');
+  const termo = inLote.value.trim();
+  const prod  = parseInt(inProd.value);
+
+  if(!prod || termo.length < 1){ box.classList.add('hide'); return; }
+
+  try{
+    // busca SEMPRE filtrando pelo produto: o mesmo lote pode existir em produtos diferentes
+    const url = `TBLLot?id_product=eq.${prod}`
+              + `&id_addrees=eq.${CFG.addr}`
+              + `&code=ilike.*${encodeURIComponent(termo)}*`
+              + `&select=id_lot,code,dtexpiration,qtyactive&order=dtexpiration&limit=6`;
+    const lotes = await api(url);
+    sugAtual = lotes;
+
+    if(!lotes.length){
+      box.innerHTML = `<button type="button" class="novo" onclick="fechaSug()">
+        Lote novo — informe a validade abaixo</button>`;
+      box.classList.remove('hide');
+      return;
+    }
+
+    box.innerHTML = lotes.map((l,i)=>{
+      const val = l.dtexpiration
+        ? new Date(l.dtexpiration+'T00:00').toLocaleDateString('pt-BR')
+        : 'sem validade';
+      return `<button type="button" onclick="usaLote(${i})">
+                <span class="lote">${l.code||'—'}</span>
+                <span class="meta">val ${val} · ${l.qtyactive??0} em estoque</span>
+              </button>`;
+    }).join('');
+    box.classList.remove('hide');
+  }catch(e){ box.classList.add('hide'); }
+}
+
+function usaLote(i){
+  const l = sugAtual[i];
+  if(!l) return;
+  inLote.value = l.code || '';
+  if(l.dtexpiration) inVal.value = l.dtexpiration;   // preenche a validade automaticamente
+  fechaSug();
+  toast('Lote existente. Vai somar ao saldo atual.','ok');
+}
+
+function fechaSug(){ document.getElementById('loteSug').classList.add('hide'); }
 
 /* ---------- entrada ---------- */
 async function entrada(){
@@ -239,12 +406,90 @@ async function entrada(){
       p_user       : CFG.user
     });
     toast('Entrada registrada.','ok');
-    inLote.value=''; inVal.value=''; inQty.value=1;
+    inLote.value=''; inVal.value=''; inQty.value=1; fechaSug();
   }catch(e){ toast('Não deu para registrar. '+e.message,'err'); }
 }
 
-/* ---------- baixa ---------- */
+/* ---------- autocomplete de lote na BAIXA ---------- */
+let sugTimerOut, sugSaida = [], loteSel = null;
+
+function buscaLoteSaida(){
+  clearTimeout(sugTimerOut);
+  sugTimerOut = setTimeout(execBuscaLoteSaida, 250);
+}
+
+async function execBuscaLoteSaida(){
+  const box = document.getElementById('outSug');
+  const termo = outLote.value.trim();
+  const prod  = parseInt(outProd.value);
+  loteSel = null; document.getElementById('outInfo').classList.add('hide');
+  if(!prod){ box.classList.add('hide'); return; }
+
+  try{
+    // só lotes COM saldo, do produto e endereço atuais
+    let url = `TBLLot?id_product=eq.${prod}&id_addrees=eq.${CFG.addr}`
+            + `&qtyactive=gt.0&select=id_lot,code,dtexpiration,qtyactive&order=dtexpiration&limit=8`;
+    if(termo) url += `&code=ilike.*${encodeURIComponent(termo)}*`;
+    const lotes = await api(url);
+    sugSaida = lotes;
+
+    if(!lotes.length){
+      box.innerHTML = `<button type="button" class="novo" onclick="fechaSugOut()">
+        Nenhum lote com saldo para esse produto</button>`;
+      box.classList.remove('hide'); return;
+    }
+    box.innerHTML = lotes.map((l,i)=>{
+      const val = l.dtexpiration
+        ? new Date(l.dtexpiration+'T00:00').toLocaleDateString('pt-BR') : 'sem validade';
+      return `<button type="button" onclick="usaLoteSaida(${i})">
+                <span class="lote">${l.code||'—'}</span>
+                <span class="meta">val ${val} · ${l.qtyactive} disponível</span></button>`;
+    }).join('');
+    box.classList.remove('hide');
+  }catch(e){ box.classList.add('hide'); }
+}
+
+function usaLoteSaida(i){
+  const l = sugSaida[i]; if(!l) return;
+  loteSel = l;
+  outLote.value = l.code || '';
+  const val = l.dtexpiration
+    ? new Date(l.dtexpiration+'T00:00').toLocaleDateString('pt-BR') : 'sem validade';
+  const info = document.getElementById('outInfo');
+  info.innerHTML = `Lote <b>${l.code||'—'}</b> · validade <b>${val}</b> · <b>${l.qtyactive}</b> disponível`;
+  info.classList.remove('hide');
+  fechaSugOut();
+}
+function fechaSugOut(){ document.getElementById('outSug').classList.add('hide'); }
+
+/* ---------- baixa de um LOTE ESPECÍFICO ---------- */
 async function saida(){
+  if(!loteSel){
+    toast('Escolha o lote na lista antes de dar baixa.','err');
+    buscaLoteSaida(); return;
+  }
+  const qtd = parseFloat(outQty.value);
+  if(qtd > loteSel.qtyactive){
+    toast(`Esse lote tem só ${loteSel.qtyactive}. Ajuste a quantidade.`,'err'); return;
+  }
+  try{
+    const r = await rpc('fn_mov_saida',{
+      p_id_product : parseInt(outProd.value),
+      p_id_addrees : CFG.addr,
+      p_qty        : qtd,
+      p_user       : CFG.user,
+      p_id_lot     : loteSel.id_lot        // <- baixa do lote informado
+    });
+    const o = Array.isArray(r)? r[0] : r;
+    if(o && o.out_faltou > 0) toast(`Baixado ${o.out_baixado}. Faltou ${o.out_faltou}.`,'err');
+    else toast('Baixa registrada.','ok');
+    outQty.value=1; outLote.value=''; loteSel=null;
+    document.getElementById('outInfo').classList.add('hide');
+  }catch(e){ toast('Não deu para dar baixa. '+e.message,'err'); }
+}
+
+/* ---------- baixa automática pelo que vence primeiro (opcional) ---------- */
+async function saidaFefo(){
   try{
     const r = await rpc('fn_mov_saida',{
       p_id_product : parseInt(outProd.value),
@@ -253,60 +498,259 @@ async function saida(){
       p_user       : CFG.user
     });
     const o = Array.isArray(r)? r[0] : r;
-    if(o && o.out_faltou > 0) toast(`Baixado ${o.out_baixado}. Faltou ${o.out_faltou} em estoque.`,'err');
-    else toast('Baixa registrada.','ok');
-    outQty.value=1;
+    if(o && o.out_faltou > 0) toast(`Baixado ${o.out_baixado}. Faltou ${o.out_faltou}.`,'err');
+    else toast('Baixa registrada pelo lote que vence primeiro.','ok');
+    outQty.value=1; outLote.value=''; loteSel=null;
+    document.getElementById('outInfo').classList.add('hide');
   }catch(e){ toast('Não deu para dar baixa. '+e.message,'err'); }
 }
 
 /* ---------- listas ---------- */
+let itensAtuais = {};   // guarda os itens exibidos p/ abrir no modal
+
 async function loadEstoque(){
   listBox.innerHTML='<p style="color:var(--mute)">Carregando…</p>';
   try{
     const d = await api(`vw_estoque?id_addrees=eq.${CFG.addr}&order=produto`);
     if(!d.length){ listBox.innerHTML='<p style="color:var(--mute)">Nenhum item em estoque. Registre uma entrada para começar.</p>'; return; }
+    d.forEach(i=> itensAtuais[i.id_lot]=i);
     listBox.innerHTML = d.map(i=>row(i, i.validade)).join('');
   }catch(e){ listBox.innerHTML='<p style="color:var(--crit)">Não deu para carregar.</p>'; }
 }
 async function loadVenc(){
   vencBox.innerHTML='<p style="color:var(--mute)">Carregando…</p>';
   try{
-    const d = await api(`vw_vencimentos?id_addrees=eq.${CFG.addr}&status_venc=in.(VENCIDO,VENCE_30,VENCE_60)&order=validade`);
-    if(!d.length){ vencBox.innerHTML='<p style="color:var(--mute)">Nada vencendo nos próximos 60 dias.</p>'; return; }
+    const d = await api(`vw_vencimentos?id_addrees=eq.${CFG.addr}&status_venc=in.(VENCIDO,VENCE_30,VENCE_60,VENCE_90)&order=validade`);
+    montaAlertas(d);
+    if(!d.length){ vencBox.innerHTML='<p style="color:var(--mute)">Nada vencendo nos próximos 90 dias.</p>'; return; }
+    d.forEach(i=> itensAtuais[i.id_lot]=i);
     vencBox.innerHTML = d.map(i=>row(i, i.validade, i.dias_para_vencer)).join('');
   }catch(e){ vencBox.innerHTML='<p style="color:var(--crit)">Não deu para carregar.</p>'; }
 }
+
 function row(i, val, dias){
   let cls='', txt = val ? new Date(val+'T00:00').toLocaleDateString('pt-BR') : 'sem data';
   if(val){
-    const d = dias!=null ? dias : Math.round((new Date(val+'T00:00') - new Date())/864e5);
+    const d = dias!=null ? dias : diasAte(val);
     if(d < 0)      { cls='c'; txt = 'venceu em '+txt; }
-    else if(d<=30) { cls='w'; txt = 'vence em '+d+' dias'; }
-    else if(d<=60) { cls='w'; txt = 'vence em '+d+' dias'; }
+    else if(d<=90) { cls='w'; txt = 'vence em '+d+' dias'; }
   }
-  return `<div class="item ${cls}">
+  return `<div class="item ${cls}" onclick="abreItem(${i.id_lot})">
     <div><div class="n">${i.produto??''}</div>
     <div class="m">lote ${i.lote||'—'} · ${txt}</div></div>
     <div class="qty">${i.quantidade??''}</div></div>`;
 }
+function diasAte(val){ return Math.round((new Date(val+'T00:00') - new Date().setHours(0,0,0,0))/864e5); }
 
-/* ---------- leitor de código de barras ---------- */
-let qr;
-function scan(target){
-  const box=document.getElementById('reader');
-  if(qr){ qr.stop().catch(()=>{}); qr=null; box.innerHTML=''; return; }
-  qr = new Html5Qrcode('reader');
-  qr.start({facingMode:'environment'}, {fps:10, qrbox:{width:250,height:130}},
-    txt=>{ document.getElementById(target).value = txt; qr.stop(); qr=null; box.innerHTML=''; toast('Código lido.','ok'); },
-    ()=>{}
-  ).catch(()=> toast('Não deu para abrir a câmera.','err'));
+/* ---------- modal: entrada/saída direto pelo item ---------- */
+function abreItem(idLot){
+  const it = itensAtuais[idLot]; if(!it) return;
+  const val = it.validade
+    ? new Date(it.validade+'T00:00').toLocaleDateString('pt-BR') : 'sem validade';
+  mdTitle.textContent = it.produto || '';
+  mdMeta.textContent  = `lote ${it.lote||'—'} · validade ${val} · ${it.quantidade} em estoque`;
+  mdBody.innerHTML = `
+    <div class="seg">
+      <button id="mdIn"  class="on" onclick="mdModo('in')">Adicionar</button>
+      <button id="mdOut" onclick="mdModo('out')">Retirar</button>
+    </div>
+    <label>Quantidade</label>
+    <input id="mdQty" type="number" inputmode="numeric" value="1" min="1">
+    <button id="mdGo" onclick="mdExec(${idLot})">Adicionar ao estoque</button>`;
+  mdModo('in');
+  document.getElementById('modal').classList.remove('hide');
 }
+let mdM='in';
+function mdModo(m){
+  mdM=m;
+  document.getElementById('mdIn').classList.toggle('on', m==='in');
+  document.getElementById('mdOut').classList.toggle('on', m==='out');
+  const b=document.getElementById('mdGo');
+  b.textContent = m==='in' ? 'Adicionar ao estoque' : 'Retirar do estoque';
+  b.className   = m==='in' ? '' : 'danger';
+}
+async function mdExec(idLot){
+  const it = itensAtuais[idLot];
+  const q  = parseFloat(document.getElementById('mdQty').value);
+  if(!q || q<=0){ toast('Informe a quantidade.','err'); return; }
+  try{
+    if(mdM==='in'){
+      await rpc('fn_mov_entrada',{
+        p_id_product:it.id_product, p_id_addrees:CFG.addr,
+        p_code:it.lote, p_dtexpiration:it.validade,
+        p_qty:q, p_user:CFG.user });
+      toast('Entrada registrada.','ok');
+    }else{
+      if(q > it.quantidade){ toast(`Esse lote tem só ${it.quantidade}.`,'err'); return; }
+      await rpc('fn_mov_saida',{
+        p_id_product:it.id_product, p_id_addrees:CFG.addr,
+        p_qty:q, p_user:CFG.user, p_id_lot:idLot });
+      toast('Baixa registrada.','ok');
+    }
+    fechaModal();
+    document.getElementById('pg-list').classList.contains('hide') ? loadVenc() : loadEstoque();
+  }catch(e){ toast('Não deu para registrar. '+e.message,'err'); }
+}
+function fechaModal(){ document.getElementById('modal').classList.add('hide'); }
+
+/* ---------- ALERTAS DE VENCIMENTO ---------- */
+/* adiamentos ficam salvos no aparelho: { id_lot: "2026-07-08" } */
+const getSnooze = ()=> JSON.parse(localStorage.getItem('samu_snooze')||'{}');
+const hojeISO   = ()=> new Date().toISOString().slice(0,10);
+
+function adiar(idLot){
+  const s = getSnooze();
+  const amanha = new Date(); amanha.setDate(amanha.getDate()+1);
+  s[idLot] = amanha.toISOString().slice(0,10);
+  localStorage.setItem('samu_snooze', JSON.stringify(s));
+  toast('Alerta adiado por 1 dia.','ok');
+  loadVenc();
+}
+function estaAdiado(idLot){
+  const s = getSnooze();
+  return s[idLot] && s[idLot] > hojeISO();
+}
+
+function montaAlertas(itens){
+  const box = document.getElementById('alertBox');
+  const vis = itens.filter(i=> !estaAdiado(i.id_lot));
+  const venc = vis.filter(i=> i.status_venc==='VENCIDO');
+  const prox = vis.filter(i=> i.status_venc!=='VENCIDO');
+
+  let html='';
+  venc.forEach(i=>{
+    html += `<div class="alert crit">
+      <div class="at">Vencido: ${i.produto}</div>
+      <div class="am">lote ${i.lote||'—'} · venceu em
+        ${new Date(i.validade+'T00:00').toLocaleDateString('pt-BR')} · ${i.quantidade} em estoque</div>
+      <div class="aa">
+        <button class="danger" onclick="baixarTudo(${i.id_lot})">Baixar do estoque</button>
+        <button class="ghost"  onclick="adiar(${i.id_lot})">Adiar 1 dia</button>
+      </div></div>`;
+  });
+  const faixa = d => d<=30 ? '30' : (d<=60 ? '60' : '90');
+  prox.forEach(i=>{
+    html += `<div class="alert warn">
+      <div class="at">Vence em ${i.dias_para_vencer} dias · aviso de ${faixa(i.dias_para_vencer)} dias</div>
+      <div class="am">${i.produto} · lote ${i.lote||'—'} · ${i.quantidade} em estoque</div>
+      <div class="aa">
+        <button class="danger" onclick="baixarTudo(${i.id_lot})">Baixar do estoque</button>
+        <button class="ghost"  onclick="adiar(${i.id_lot})">Adiar 1 dia</button>
+      </div></div>`;
+  });
+  box.innerHTML = html;
+  return {venc:venc.length, prox:prox.length};
+}
+
+async function baixarTudo(idLot){
+  const it = itensAtuais[idLot]; if(!it) return;
+  if(!confirm(`Baixar ${it.quantidade} de ${it.produto} (lote ${it.lote||'—'})?`)) return;
+  try{
+    await rpc('fn_mov_saida',{
+      p_id_product:it.id_product, p_id_addrees:CFG.addr,
+      p_qty:it.quantidade, p_user:CFG.user, p_id_lot:idLot });
+    toast('Item baixado do estoque.','ok');
+    loadVenc();
+  }catch(e){ toast('Não deu para baixar. '+e.message,'err'); }
+}
+
+/* ---------- NOTIFICAÇÕES (8h, 12h, 18h) ---------- */
+async function pedePermissao(){
+  if(!('Notification' in window)) return false;
+  if(Notification.permission === 'granted') return true;
+  if(Notification.permission === 'denied')  return false;
+  return (await Notification.requestPermission()) === 'granted';
+}
+
+async function checaVencimentos(forcar=false){
+  if(!CFG) return;
+  try{
+    const d = await api(`vw_vencimentos?id_addrees=eq.${CFG.addr}&status_venc=in.(VENCIDO,VENCE_30,VENCE_60,VENCE_90)&order=validade`);
+    d.forEach(i=> itensAtuais[i.id_lot]=i);
+    const vis  = d.filter(i=> !estaAdiado(i.id_lot));
+    const venc = vis.filter(i=> i.status_venc==='VENCIDO').length;
+    const prox = vis.length - venc;
+    if(!vis.length) return;
+
+    // marca a badge na aba Validade
+    const tab = document.getElementById('t-venc');
+    tab.innerHTML = `<i>◷</i>Validade${vis.length?` <span class="badge">${vis.length}</span>`:''}`;
+
+    if(!(await pedePermissao())) return;
+    const partes=[];
+    if(venc) partes.push(`${venc} vencido${venc>1?'s':''}`);
+    if(prox) partes.push(`${prox} a vencer`);
+    new Notification('SAMU Estoque', {
+      body: partes.join(' e ') + '. Toque para revisar.',
+      tag : 'samu-venc'
+    });
+  }catch(e){}
+}
+
+/* dispara ao abrir e agenda 8h, 12h e 18h enquanto o app estiver aberto */
+function agendaAvisos(){
+  const HORAS = [8,12,18];
+  setInterval(()=>{
+    const ag = new Date();
+    if(ag.getMinutes()!==0) return;              // roda no minuto zero
+    if(!HORAS.includes(ag.getHours())) return;
+    const marca = hojeISO()+'-'+ag.getHours();
+    if(localStorage.getItem('samu_last_alert')===marca) return;
+    localStorage.setItem('samu_last_alert', marca);
+    checaVencimentos(true);
+  }, 60000);
+}
+/* ---------- leitor de código de barras (tela cheia) ---------- */
+let qr, scanAlvo = null;
+
+function scan(target){
+  scanAlvo = target;
+  document.getElementById('scanTitle').textContent =
+    target==='outLote' ? 'Escanear lote para baixa' : 'Escanear lote';
+  document.getElementById('scanOverlay').classList.remove('hide');
+
+  qr = new Html5Qrcode('reader');
+  qr.start(
+    {facingMode:'environment'},
+    {fps:10, qrbox:{width:260,height:150}},
+    txt=>{
+      document.getElementById(scanAlvo).value = txt;
+      const alvo = scanAlvo;
+      fechaScan();
+      toast('Código lido.','ok');
+      if(alvo==='inLote')  execBuscaLote();
+      if(alvo==='outLote') execBuscaLoteSaida();
+    },
+    ()=>{}
+  ).catch(()=>{
+    fechaScan();
+    toast('Não deu para abrir a câmera. Verifique a permissão.','err');
+  });
+}
+
+function fechaScan(){
+  const ov = document.getElementById('scanOverlay');
+  if(qr){
+    qr.stop().then(()=>{ qr.clear(); qr=null; }).catch(()=>{ qr=null; });
+  }
+  ov.classList.add('hide');
+  document.getElementById('reader').innerHTML='';
+}
+
+/* botão voltar do aparelho fecha o scanner/modal em vez de sair do app */
+window.addEventListener('popstate', ()=>{
+  const ov = document.getElementById('scanOverlay');
+  if(ov && !ov.classList.contains('hide')){ fechaScan(); history.pushState(null,''); return; }
+  const md = document.getElementById('modal');
+  if(md && !md.classList.contains('hide')){ fechaModal(); history.pushState(null,''); }
+});
+history.pushState(null,'');
 
 /* ---------- início ---------- */
 async function boot(){
   if(!CFG){ go('cfg'); document.getElementById('ctx').textContent='Configure o acesso'; return; }
   document.getElementById('ctx').textContent = CFG.user + ' · estoque ' + CFG.addr;
-  try{ await loadProdutos(); go('in'); }
+  try{ await loadProdutos(); go('in'); checaVencimentos(); agendaAvisos(); }
   catch(e){ toast('Não deu para conectar ao banco. Revise a configuração.','err'); go('cfg'); }
 }
 boot();
