@@ -111,6 +111,44 @@
   .scan-cam video{width:100%!important;height:100%!important;object-fit:cover}
   .scan-hint{color:var(--mute);font-size:13px;text-align:center;margin:14px 0 0}
   .scan-cancel{margin-top:12px}
+  /* aviso de vencimentos ao abrir */
+  .aviso-ov{
+    position:fixed;inset:0;z-index:250;background:#050D18;
+    display:flex;flex-direction:column;padding:0 16px
+      calc(16px + env(safe-area-inset-bottom));
+    animation:av-in .28s ease both
+  }
+  @keyframes av-in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion: reduce){ .aviso-ov{animation:none} }
+  .aviso-top{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:calc(16px + env(safe-area-inset-top)) 0 10px;
+    font-size:17px;font-weight:700
+  }
+  .aviso-resumo{color:var(--mute);font-size:13.5px;margin-bottom:14px}
+  .aviso-lista{flex:1;min-height:0;overflow:auto}
+  /* cabeçalho de cada faixa de prazo */
+  .faixa{
+    display:flex;align-items:center;gap:8px;margin:14px 0 8px;
+    font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase
+  }
+  .faixa::after{content:"";flex:1;height:1px;background:var(--line)}
+  .faixa.f0{color:var(--crit)} .faixa.f30{color:var(--warn)}
+  .faixa.f60{color:#C9A227}    .faixa.f90{color:var(--mute)}
+  .av-item{
+    display:flex;gap:12px;align-items:center;padding:11px 12px;margin-bottom:8px;
+    background:var(--navy-2);border:1px solid var(--line);border-radius:11px;
+    border-left:5px solid var(--line)
+  }
+  .av-item.f0{border-left-color:var(--crit)}
+  .av-item.f30{border-left-color:var(--warn)}
+  .av-item.f60{border-left-color:#C9A227}
+  .av-item.f90{border-left-color:#5C7CA6}
+  .av-item .n{font-weight:600;font-size:14.5px}
+  .av-item .m{color:var(--mute);font-size:12.5px;margin-top:2px}
+  .av-item .q{margin-left:auto;font-weight:700;font-size:16px}
+  .aviso-rodape{display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
+  .aviso-rodape button{margin:0;padding:14px 10px;font-size:13.5px}
   .row{display:flex;gap:10px} .row>*{flex:1}
   /* sugestões de lote já existente */
   .sug{margin-top:6px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#0E2647}
@@ -241,6 +279,21 @@
     <div id="vencBox"></div>
   </section>
 </main>
+
+<!-- ===== AVISO DE VENCIMENTOS (abre por cima ao iniciar) ===== -->
+<div id="avisoOv" class="aviso-ov hide">
+  <div class="aviso-top">
+    <span id="avisoTitulo">Atenção aos vencimentos</span>
+    <button class="scan-x" onclick="fechaAviso()" aria-label="Fechar">✕</button>
+  </div>
+  <div id="avisoResumo" class="aviso-resumo"></div>
+  <div id="avisoLista" class="aviso-lista"></div>
+  <div class="aviso-rodape">
+    <button class="ghost" onclick="adiarTodos()">Adiar 1 dia</button>
+    <button onclick="verValidade()">Ver na lista</button>
+    <button class="ghost" onclick="fechaAviso()">Fechar</button>
+  </div>
+</div>
 
 <!-- ===== SCANNER EM TELA CHEIA ===== -->
 <div id="scanOverlay" class="scan-ov hide">
@@ -664,6 +717,82 @@ async function baixarTudo(idLot){
   }catch(e){ toast('Não deu para baixar. '+e.message,'err'); }
 }
 
+/* ---------- AVISO AO ABRIR O APP ---------- */
+let avisoItens = [];
+
+/* classifica em faixas: 0 = vencido, 30, 60, 90 */
+function faixaDe(i){
+  const d = i.dias_para_vencer;
+  if(i.status_venc === 'VENCIDO' || d < 0) return 0;
+  if(d <= 30) return 30;
+  if(d <= 60) return 60;
+  return 90;
+}
+
+function montaAviso(itens){
+  const vis = itens.filter(i=> !estaAdiado(i.id_lot));
+  if(!vis.length) return false;
+
+  avisoItens = vis;
+
+  // agrupa e ordena: vencidos primeiro, depois 30, 60 e 90
+  const grupos = {0:[],30:[],60:[],90:[]};
+  vis.forEach(i=> grupos[faixaDe(i)].push(i));
+  Object.values(grupos).forEach(g=>
+    g.sort((a,b)=> (a.dias_para_vencer??0) - (b.dias_para_vencer??0)));
+
+  // resumo no topo, na mesma ordem de prioridade
+  const partes = [];
+  if(grupos[0].length)  partes.push(`${grupos[0].length} vencido${grupos[0].length>1?'s':''}`);
+  if(grupos[30].length) partes.push(`${grupos[30].length} em até 30 dias`);
+  if(grupos[60].length) partes.push(`${grupos[60].length} em até 60 dias`);
+  if(grupos[90].length) partes.push(`${grupos[90].length} em até 90 dias`);
+
+  document.getElementById('avisoTitulo').textContent =
+    grupos[0].length ? 'Há material vencido' : 'Atenção aos vencimentos';
+  document.getElementById('avisoResumo').textContent = partes.join(' · ');
+
+  const rotulo = {0:'Vencidos', 30:'Vencem em até 30 dias',
+                  60:'Vencem em até 60 dias', 90:'Vencem em até 90 dias'};
+  let html = '';
+  [0,30,60,90].forEach(f=>{
+    if(!grupos[f].length) return;
+    html += `<div class="faixa f${f}">${rotulo[f]}</div>`;
+    html += grupos[f].map(i=>{
+      const dt = i.validade
+        ? new Date(i.validade+'T00:00').toLocaleDateString('pt-BR') : 'sem data';
+      const quando = f===0
+        ? `venceu em ${dt}`
+        : `vence em ${i.dias_para_vencer} dias · ${dt}`;
+      return `<div class="av-item f${f}">
+                <div><div class="n">${i.produto??''}</div>
+                <div class="m">lote ${i.lote||'—'} · ${quando}</div></div>
+                <div class="q">${i.quantidade??''}</div>
+              </div>`;
+    }).join('');
+  });
+
+  document.getElementById('avisoLista').innerHTML = html;
+  document.getElementById('avisoOv').classList.remove('hide');
+  return true;
+}
+
+function fechaAviso(){ document.getElementById('avisoOv').classList.add('hide'); }
+
+/* adia todos os itens mostrados por 1 dia */
+function adiarTodos(){
+  const s = getSnooze();
+  const amanha = new Date(); amanha.setDate(amanha.getDate()+1);
+  const dia = amanha.toISOString().slice(0,10);
+  avisoItens.forEach(i=> s[i.id_lot] = dia);
+  localStorage.setItem('samu_snooze', JSON.stringify(s));
+  fechaAviso();
+  toast('Avisos adiados por 1 dia.','ok');
+}
+
+/* leva para a aba Validade */
+function verValidade(){ fechaAviso(); go('venc'); }
+
 /* ---------- NOTIFICAÇÕES (8h, 12h, 18h) ---------- */
 async function pedePermissao(){
   if(!('Notification' in window)) return false;
@@ -672,7 +801,7 @@ async function pedePermissao(){
   return (await Notification.requestPermission()) === 'granted';
 }
 
-async function checaVencimentos(forcar=false){
+async function checaVencimentos(mostrarAviso=false){
   if(!CFG) return;
   try{
     const d = await api(`vw_vencimentos?id_addrees=eq.${CFG.addr}&status_venc=in.(VENCIDO,VENCE_30,VENCE_60,VENCE_90)&order=validade`);
@@ -680,11 +809,15 @@ async function checaVencimentos(forcar=false){
     const vis  = d.filter(i=> !estaAdiado(i.id_lot));
     const venc = vis.filter(i=> i.status_venc==='VENCIDO').length;
     const prox = vis.length - venc;
-    if(!vis.length) return;
 
-    // marca a badge na aba Validade
+    // contador na aba Validade
     const tab = document.getElementById('t-venc');
     tab.innerHTML = `<i>◷</i>Validade${vis.length?` <span class="badge">${vis.length}</span>`:''}`;
+
+    if(!vis.length) return;
+
+    // aviso por cima da tela
+    if(mostrarAviso) montaAviso(d);
 
     if(!(await pedePermissao())) return;
     const partes=[];
@@ -710,6 +843,7 @@ function agendaAvisos(){
     checaVencimentos(true);
   }, 60000);
 }
+
 /* ---------- leitor de código de barras (tela cheia) ---------- */
 let qr, scanAlvo = null;
 
@@ -749,6 +883,8 @@ function fechaScan(){
 
 /* botão voltar do aparelho fecha o scanner/modal em vez de sair do app */
 window.addEventListener('popstate', ()=>{
+  const av = document.getElementById('avisoOv');
+  if(av && !av.classList.contains('hide')){ fechaAviso(); history.pushState(null,''); return; }
   const ov = document.getElementById('scanOverlay');
   if(ov && !ov.classList.contains('hide')){ fechaScan(); history.pushState(null,''); return; }
   const md = document.getElementById('modal');
@@ -767,7 +903,7 @@ function tiraSplash(){
 async function boot(){
   if(!CFG){ go('cfg'); document.getElementById('ctx').textContent='Configure o acesso'; tiraSplash(); return; }
   document.getElementById('ctx').textContent = CFG.user + ' · estoque ' + CFG.addr;
-  try{ await loadProdutos(); go('in'); checaVencimentos(); agendaAvisos(); }
+  try{ await loadProdutos(); go('in'); checaVencimentos(true); agendaAvisos(); }
   catch(e){ toast('Não deu para conectar ao banco. Revise a configuração.','err'); go('cfg'); }
   finally{ tiraSplash(); }
 }
