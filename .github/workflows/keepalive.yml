@@ -1,11 +1,12 @@
 name: keepalive
 
-# Roda domingo e quarta, 12:10 UTC (~09:10 em Brasília).
-# Duas vezes por semana dá folga contra os 7 dias do Supabase:
-# se uma execução falhar, a outra ainda segura.
+# Roda TODOS OS DIAS, duas vezes (10:10 e 21:10 UTC ≈ 07:10 e 18:10 de Brasília).
+# Rodar diariamente fecha a janela que deixou o banco suspender entre um
+# ping e outro. As duas execuções dão margem extra: se uma falhar, a outra segura.
 on:
   schedule:
-    - cron: '10 12 * * 0,3'
+    - cron: '10 10 * * *'
+    - cron: '10 21 * * *'
   workflow_dispatch:        # permite rodar na mão pelo botão "Run workflow"
 
 permissions:
@@ -43,7 +44,7 @@ jobs:
           cat /tmp/resposta.txt
 
           if [ "$codigo" -lt 200 ] || [ "$codigo" -ge 300 ]; then
-            echo "Ping falhou."
+            echo "Ping falhou (o banco pode estar suspenso: religue no painel do Supabase)."
             exit 1
           fi
           echo "Banco acordado com sucesso."
