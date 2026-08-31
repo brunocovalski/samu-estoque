@@ -150,6 +150,11 @@
   .aviso-rodape{display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
   .aviso-rodape button{margin:0;padding:14px 10px;font-size:13.5px}
   .row{display:flex;gap:10px} .row>*{flex:1}
+  /* linha do checkbox "tem dia exato" */
+  .linkline{display:flex;align-items:center;gap:8px;color:var(--ink);
+    font-size:13.5px;margin:10px 0 6px;cursor:pointer}
+  .linkline input{width:auto;flex:0 0 auto}
+  .hint-val{margin-top:6px;font-size:12.5px;color:var(--warn)}
   /* sugestões de lote já existente */
   .sug{margin-top:6px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#0E2647}
   .sug button{
@@ -238,7 +243,12 @@
       </div>
       <div id="loteSug" class="sug hide"></div>
       <label>Validade</label>
-      <input id="inVal" type="date">
+      <input id="inValMes" type="month" oninput="atualizaAvisoVal()">
+      <label class="linkline">
+        <input type="checkbox" id="inTemDia" onchange="toggleDia()"> tem dia exato na embalagem
+      </label>
+      <input id="inVal" type="date" class="hide">
+      <div id="inValAviso" class="hint-val hide"></div>
       <label>Quantidade</label>
       <input id="inQty" type="number" inputmode="numeric" value="1" min="1">
       <button onclick="entrada()">Adicionar ao estoque</button>
@@ -394,7 +404,8 @@ async function loadProdutos(){
   });
   // trocar de produto limpa o lote: lote é sempre relativo a um produto
   document.getElementById('inProd').onchange = ()=>{
-    inLote.value=''; inVal.value=''; fechaSug();
+    inLote.value=''; inVal.value=''; inValMes.value='';
+    inTemDia.checked=false; toggleDia(); fechaSug();
   };
   document.getElementById('outProd').onchange = ()=>{
     outLote.value=''; loteSel=null; fechaSugOut();
@@ -450,12 +461,55 @@ function usaLote(i){
   const l = sugAtual[i];
   if(!l) return;
   inLote.value = l.code || '';
-  if(l.dtexpiration) inVal.value = l.dtexpiration;   // preenche a validade automaticamente
+  if(l.dtexpiration){
+    // preenche a validade do lote existente no seletor de mês (AAAA-MM)
+    document.getElementById('inTemDia').checked = false;
+    toggleDia();
+    document.getElementById('inValMes').value = l.dtexpiration.slice(0,7);
+    atualizaAvisoVal();
+  }
   fechaSug();
   toast('Lote existente. Vai somar ao saldo atual.','ok');
 }
 
 function fechaSug(){ document.getElementById('loteSug').classList.add('hide'); }
+
+/* ---------- validade: mês/ano vira último dia do mês ---------- */
+function ultimoDiaDoMes(ano, mes){        // mes = 1..12
+  return new Date(ano, mes, 0).getDate(); // dia 0 do mês seguinte = último deste
+}
+/* transforma "2027-03" em "2027-03-31"; data completa passa direto */
+function mesParaData(valorMes){
+  if(!valorMes) return null;
+  const [a,m] = valorMes.split('-').map(Number);
+  if(!a || !m) return null;
+  const dia = String(ultimoDiaDoMes(a,m)).padStart(2,'0');
+  return `${a}-${String(m).padStart(2,'0')}-${dia}`;
+}
+/* alterna entre seletor de mês e data completa na tela de entrada */
+function toggleDia(){
+  const temDia = document.getElementById('inTemDia').checked;
+  document.getElementById('inVal').classList.toggle('hide', !temDia);
+  document.getElementById('inValMes').classList.toggle('hide', temDia);
+  atualizaAvisoVal();
+}
+/* mostra ao operador qual data será gravada quando ele usa só mês/ano */
+function atualizaAvisoVal(){
+  const box = document.getElementById('inValAviso');
+  const temDia = document.getElementById('inTemDia').checked;
+  if(temDia){ box.classList.add('hide'); return; }
+  const d = mesParaData(document.getElementById('inValMes').value);
+  if(!d){ box.classList.add('hide'); return; }
+  box.textContent = 'Será registrado como ' +
+    new Date(d+'T00:00').toLocaleDateString('pt-BR') + ' (último dia do mês).';
+  box.classList.remove('hide');
+}
+/* devolve a validade final da tela de entrada, em YYYY-MM-DD */
+function validadeEntrada(){
+  const temDia = document.getElementById('inTemDia').checked;
+  return temDia ? (document.getElementById('inVal').value || null)
+                : mesParaData(document.getElementById('inValMes').value);
+}
 
 /* ---------- entrada ---------- */
 async function entrada(){
@@ -464,12 +518,13 @@ async function entrada(){
       p_id_product : parseInt(inProd.value),
       p_id_addrees : CFG.addr,
       p_code       : inLote.value.trim(),
-      p_dtexpiration: inVal.value || null,
+      p_dtexpiration: validadeEntrada(),
       p_qty        : parseFloat(inQty.value),
       p_user       : CFG.user
     });
     toast('Entrada registrada.','ok');
-    inLote.value=''; inVal.value=''; inQty.value=1; fechaSug();
+    inLote.value=''; inVal.value=''; inValMes.value=''; inTemDia.checked=false;
+    toggleDia(); inQty.value=1; fechaSug();
   }catch(e){ toast('Não deu para registrar. '+e.message,'err'); }
 }
 
